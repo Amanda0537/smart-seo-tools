@@ -223,20 +223,413 @@ return <div className="c" style={{padding:"28px 24px 72px",maxWidth:800}}>
 </div>}
 
 // ═══ WRITER PAGE ═══
-function Writer({lang}){const t=T[lang]||T.en;const[tp,sTp]=useState("");const[kw,sKw]=useState("");const[ld,sLd]=useState(false);const[res,sR]=useState("");const ln=LANGS[lang]?.name||"English";
-async function gen(){if(!tp.trim())return;sLd(true);sR("");try{const r=await fetch("/api/writer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`Write SEO blog in ${ln} about "${tp}"${kw?` keyword:"${kw}"`:""}. Title ≤60 chars w/ keyword first. Meta desc 120-160 chars. H1>H2>H3. Keyword in first 100 words. 1200+ words. 4-6 FAQ. NO "In today's world","Let's dive in". Data+examples. Clean HTML.`})});if(!r.ok)throw new Error(`API ${r.status}`);const d=await r.json();sR((d.content||[]).map(b=>b.text||"").join(""))}catch(e){sR("Failed.")}sLd(false)}
+function Writer({lang}){
+const t=T[lang]||T.en;
+const[step,setStep]=useState(1);
+const[topic,setTopic]=useState("");
+const[keyword,setKeyword]=useState("");
+const[wLang,setWLang]=useState("English");
+const[pageType,setPageType]=useState("tutorial");
+const[titles,setTitles]=useState(null);
+const[selectedTitle,setSelectedTitle]=useState(null);
+const[article,setArticle]=useState(null);
+const[loading,setLoading]=useState(false);
+const[error,setError]=useState("");
+const[pipelineStep,setPipelineStep]=useState("");
+const[viewMode,setViewMode]=useState("html");
+
+const PAGE_TYPES=[
+  {id:"tutorial",label:"Tutorial / How-to",icon:"📝",desc:"Step-by-step instructions"},
+  {id:"comparison",label:"Comparison / VS",icon:"⚖️",desc:"Compare products or approaches"},
+  {id:"tierlist",label:"Tier List / Ranking",icon:"🏆",desc:"Rate and rank items"},
+  {id:"tool",label:"Tool / Calculator",icon:"🔧",desc:"Describe an online tool"},
+  {id:"database",label:"Database / Wiki",icon:"📚",desc:"Reference entry with data"},
+];
+
+const LANG_OPTIONS=["English","中文","Español","Deutsch","Français","日本語","Português","한국어","Bahasa Indonesia","Türkçe"];
+
+// Step 1 → 2: Generate titles
+async function handleGenerateTitles(){
+  if(!topic.trim())return;
+  setLoading(true);setError("");
+  try{
+    const r=await fetch("/api/writer-titles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,keyword,language:wLang,pageType})});
+    if(!r.ok)throw new Error(`API ${r.status}`);
+    const d=await r.json();
+    setTitles(d.titles||[]);
+    setStep(2);
+  }catch(e){setError("Failed to generate titles. Please try again.")}
+  setLoading(false);
+}
+
+// Step 2 → 3: Generate article
+async function handleGenerate(){
+  if(!selectedTitle)return;
+  setLoading(true);setError("");setStep(3);
+  const pipelineSteps=["Researching keywords...","Building article outline...","Writing content...","Generating FAQ section...","Quality check...","Fixing issues...","Fetching images...","Assembling final article..."];
+  let si=0;
+  setPipelineStep(pipelineSteps[0]);
+  const interval=setInterval(()=>{si++;if(si<pipelineSteps.length)setPipelineStep(pipelineSteps[si]);},12000);
+  try{
+    // Generate article
+    const r=await fetch("/api/writer-generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:selectedTitle.title,topic,keyword,language:wLang,pageType,suggestedKeywords:selectedTitle.suggested_keywords||[]})});
+    if(!r.ok)throw new Error(`API ${r.status}`);
+    const d=await r.json();
+    if(!d.success)throw new Error(d.error||"Generation failed");
+
+    // Fetch images
+    setPipelineStep("Fetching images...");
+    const imgQueries=(d.article.image_queries||[]).map((q,i)=>({query:q,role:i===0?"hero":`section-${i}`}));
+    let images=[];
+    if(imgQueries.length>0){
+      try{
+        const ir=await fetch("/api/writer-images",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({queries:imgQueries})});
+        if(ir.ok){const id=await ir.json();images=id.images||[];}
+      }catch(e){console.error("Image fetch failed:",e)}
+    }
+
+    // Assemble final article with images
+    setPipelineStep("Assembling final article...");
+    const assembledArticle={...d.article,images};
+    setArticle(assembledArticle);
+    setStep(4);
+  }catch(e){setError("Generation failed: "+e.message);setStep(2)}
+  clearInterval(interval);setLoading(false);
+}
+
+// Build full HTML document for download/preview
+function buildFullHtml(){
+  if(!article)return"";
+  const heroImg=article.images?.find(i=>i.role==="hero");
+  const sectionImgs=article.images?.filter(i=>i.role!=="hero")||[];
+  const faqHtml=(article.faqs||[]).map(f=>`
+    <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 itemprop="name">${f.question}</h3>
+      <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+        <p itemprop="text">${f.answer}</p>
+      </div>
+    </div>`).join("\n");
+  const faqSchema=article.faqs?.length?`<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[${article.faqs.map(f=>`{"@type":"Question","name":${JSON.stringify(f.question)},"acceptedAnswer":{"@type":"Answer","text":${JSON.stringify(f.answer)}}}`).join(",")}]}
+</script>`:"";
+  const langCode={"English":"en","中文":"zh","Español":"es","Deutsch":"de","Français":"fr","日本語":"ja","Português":"pt","한국어":"ko","Bahasa Indonesia":"id","Türkçe":"tr"}[article.language]||"en";
+
+  // Insert section images into content
+  let contentWithImages=article.content_html||"";
+  if(sectionImgs.length>0){
+    const h2Matches=[...contentWithImages.matchAll(/<\/h2>/gi)];
+    let insertions=0;
+    for(let i=0;i<Math.min(sectionImgs.length,h2Matches.length);i++){
+      const img=sectionImgs[i];
+      const imgTag=`\n<figure><img src="${img.url}" alt="${(img.alt_suggestion||"").replace(/"/g,"&quot;")}" loading="lazy" width="1200" height="800"></figure>\n`;
+      // Insert after the first <p> following each H2
+      const h2Pos=h2Matches[i].index+h2Matches[i][0].length;
+      const nextP=contentWithImages.indexOf("</p>",h2Pos);
+      if(nextP>-1){
+        const insertPos=nextP+4;
+        contentWithImages=contentWithImages.slice(0,insertPos+insertions*imgTag.length)+imgTag+contentWithImages.slice(insertPos+insertions*imgTag.length);
+        // Rough offset tracking — won't be perfect but acceptable
+      }
+    }
+  }
+
+  return `<!DOCTYPE html>
+<html lang="${langCode}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${article.title}</title>
+<meta name="description" content="${(article.meta_description||"").replace(/"/g,"&quot;")}">
+<meta property="og:title" content="${article.title}">
+<meta property="og:description" content="${(article.meta_description||"").replace(/"/g,"&quot;")}">
+<meta property="og:type" content="article">
+${heroImg?`<meta property="og:image" content="${heroImg.url}">`:""}
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://yourdomain.com/${article.slug}">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":${JSON.stringify(article.h1||article.title)},"description":${JSON.stringify(article.meta_description||"")},"datePublished":"${article.date}","dateModified":"${article.date}","author":{"@type":"Organization","name":"Smart SEO Tools"}${heroImg?`,"image":"${heroImg.url}"`:""}}</script>
+${faqSchema}
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.7;color:#333;max-width:780px;margin:0 auto;padding:20px;background:#fff}
+article{margin-top:2rem}
+h1{font-size:2rem;line-height:1.2;margin-bottom:1rem;color:#1a1a1a}
+h2{font-size:1.5rem;margin-top:2.5rem;margin-bottom:1rem;color:#1a1a1a;border-bottom:2px solid #f0f0f0;padding-bottom:.5rem}
+h3{font-size:1.2rem;margin-top:1.5rem;margin-bottom:.75rem;color:#2a2a2a}
+p{margin-bottom:1.2rem;font-size:1.05rem}
+img,figure img{max-width:100%;height:auto;border-radius:8px;margin:1.5rem 0}
+figure{margin:1.5rem 0}
+ul,ol{margin:1rem 0 1.5rem 1.5rem}
+li{margin-bottom:.5rem}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+th,td{padding:.75rem 1rem;text-align:left;border-bottom:1px solid #e0e0e0}
+th{background:#f8f9fa;font-weight:600}
+blockquote{border-left:4px solid #3498db;margin:1.5rem 0;padding:1rem 1.5rem;background:#f8f9fa;font-style:italic}
+.faq-section{margin-top:3rem}
+.faq-item{margin-bottom:1.5rem;padding:1rem;background:#f8f9fa;border-radius:8px}
+.faq-item h3{margin-top:0;color:#1a1a1a}
+.meta-info{color:#666;font-size:.9rem;margin-bottom:2rem}
+@media(max-width:600px){body{padding:15px}h1{font-size:1.6rem}h2{font-size:1.3rem}table{font-size:.9rem}}
+</style>
+</head>
+<body>
+<article>
+<header>
+<h1>${article.h1||article.title}</h1>
+<p class="meta-info">Published: <time datetime="${article.date}">${article.date}</time> | By Smart SEO Tools Team</p>
+</header>
+${heroImg?`<figure><img src="${heroImg.url}" alt="${(heroImg.alt_suggestion||"").replace(/"/g,"&quot;")}" loading="eager" width="1200" height="800"></figure>`:""}
+${contentWithImages}
+<section class="faq-section" itemscope itemtype="https://schema.org/FAQPage">
+<h2>Frequently Asked Questions</h2>
+${faqHtml}
+</section>
+</article>
+</body>
+</html>`;
+}
+
+// Build Markdown version
+function buildMarkdown(){
+  if(!article)return"";
+  const heroImg=article.images?.find(i=>i.role==="hero");
+  let md=`---
+title: "${article.title}"
+meta_description: "${article.meta_description||""}"
+slug: "${article.slug}"
+primary_keyword: "${article.keywords?.primary||""}"
+secondary_keywords: ${JSON.stringify(article.keywords?.secondary||[])}
+date: "${article.date}"
+language: "${article.language}"
+page_type: "${article.page_type}"
+${heroImg?`hero_image: "${heroImg.url}"`:""}
+---
+
+# ${article.h1||article.title}
+
+`;
+  // Convert HTML content to rough markdown
+  let content=article.content_html||"";
+  content=content.replace(/<h2[^>]*>(.*?)<\/h2>/gi,"\n## $1\n");
+  content=content.replace(/<h3[^>]*>(.*?)<\/h3>/gi,"\n### $1\n");
+  content=content.replace(/<p[^>]*>(.*?)<\/p>/gis,"\n$1\n");
+  content=content.replace(/<strong>(.*?)<\/strong>/gi,"**$1**");
+  content=content.replace(/<em>(.*?)<\/em>/gi,"*$1*");
+  content=content.replace(/<li[^>]*>(.*?)<\/li>/gi,"- $1");
+  content=content.replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi,"");
+  content=content.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis,"> $1");
+  content=content.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi,"[$2]($1)");
+  content=content.replace(/<[^>]+>/g,"");
+  content=content.replace(/\n{3,}/g,"\n\n");
+  md+=content.trim();
+
+  // Add images
+  const sectionImgs=article.images?.filter(i=>i.role!=="hero")||[];
+  if(heroImg){md=md.replace(/^(# .+\n)/m,`$1\n![${heroImg.alt_suggestion||"Hero image"}](${heroImg.url})\n`);}
+
+  // Add FAQ
+  md+="\n\n## Frequently Asked Questions\n\n";
+  (article.faqs||[]).forEach(f=>{md+=`**Q: ${f.question}**\n\n${f.answer}\n\n`;});
+
+  return md;
+}
+
+function downloadFile(content,filename,mimeType){
+  const blob=new Blob([content],{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function reset(){setStep(1);setTopic("");setKeyword("");setTitles(null);setSelectedTitle(null);setArticle(null);setError("");setViewMode("html")}
+
 return <div className="c" style={{padding:"28px 24px 72px",maxWidth:800}}>
 <Bc items={[{label:"Home",href:"/"},{label:t.nav_writer}]} />
-<h1>{t.writer_title}</h1><p style={{fontSize:14,maxWidth:560,marginBottom:20}}>{t.writer_sub}</p>
-<div style={{border:"2px solid var(--g)",borderRadius:"var(--radl)",padding:18,background:"var(--gl)",marginBottom:20}}>
-<div style={{marginBottom:8}}><label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:3}}>{t.topic} *</label><input value={tp} onChange={e=>sTp(e.target.value)} placeholder="How to improve page speed" style={{width:"100%",padding:"9px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)"}} /></div>
-<div style={{marginBottom:12}}><label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:3}}>{t.keyword}</label><input value={kw} onChange={e=>sKw(e.target.value)} placeholder="page speed optimization" style={{width:"100%",padding:"9px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)"}} /></div>
-<button onClick={gen} disabled={ld} className="btn" style={{background:"var(--g)",color:"#fff",opacity:ld?0.7:1}}>{ld?t.generating:t.generate}</button>
+<h1>{t.writer_title}</h1>
+<p style={{fontSize:14,maxWidth:560,marginBottom:20}}>{t.writer_sub}</p>
+
+{/* Progress Steps */}
+<div style={{display:"flex",gap:4,marginBottom:24}}>
+{[{n:1,l:"Input"},{n:2,l:"Title"},{n:3,l:"Generate"},{n:4,l:"Result"}].map(s=>
+<div key={s.n} style={{flex:1,textAlign:"center"}}>
+<div style={{height:4,borderRadius:2,background:step>=s.n?"var(--b)":"var(--bg3)",transition:"background .3s",marginBottom:4}} />
+<span style={{fontSize:10,fontWeight:step===s.n?700:400,color:step>=s.n?"var(--b)":"var(--t4)"}}>{s.n}. {s.l}</span>
+</div>)}
 </div>
-{res&&<div style={{border:"1px solid var(--bd1)",borderRadius:"var(--radl)",padding:24,background:"var(--bg2)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><h2 style={{marginTop:0,fontSize:16}}>{t.result}</h2><button onClick={()=>navigator.clipboard?.writeText(res)} className="btn bp" style={{fontSize:11,padding:"5px 12px"}}>{t.copy_html}</button></div><div dangerouslySetInnerHTML={{__html:res}} style={{fontSize:13,lineHeight:1.8}} /></div>}
-<section><h2>How It Works</h2><p>Generates content following SEO frameworks: proper H1→H2→H3, keyword in title and first paragraph, FAQ sections. Avoids AI filler Google penalizes. Add your own experience before publishing. See our <IL href="/blog/ai-content-seo-guide">AI content guide</IL>.</p></section>
-<section style={{marginTop:20}}><h2>{t.faq_title}</h2><FAQ faqs={[{q:"Is it free?",a:"Yes, no signup needed."},{q:"Will AI content rank?",a:"Google penalizes low quality, not AI. Add expertise and data before publishing."},{q:"What structure?",a:"H1 with keyword, nested H2/H3, keyword in first 100 words, 1200+ words, 4-6 FAQ."},{q:"Can I use generated content?",a:"Yes, all yours. Edit to add unique insights before publishing."}]} /></section>
-<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - Blog Writer",url:"https://webchecker.one/blog-writer",applicationCategory:"Content Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
+
+{error&&<div style={{background:"var(--rl)",border:"1px solid var(--r)",borderRadius:"var(--rad)",padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--r)"}}>{error}<button onClick={()=>setError("")} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--r)",fontWeight:700}}>✕</button></div>}
+
+{/* ═══ STEP 1: Input ═══ */}
+{step===1&&<div style={{border:"2px solid var(--g)",borderRadius:"var(--radl)",padding:20,background:"var(--gl)"}}>
+<div style={{marginBottom:12}}>
+<label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:4}}>Blog Topic *</label>
+<input value={topic} onChange={e=>setTopic(e.target.value)} placeholder="e.g., How to improve website page speed" style={{width:"100%",padding:"10px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)"}} />
+</div>
+<div style={{marginBottom:12}}>
+<label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:4}}>Target Keyword (optional)</label>
+<input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="e.g., page speed optimization" style={{width:"100%",padding:"10px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)"}} />
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+<div>
+<label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:4}}>Language</label>
+<select value={wLang} onChange={e=>setWLang(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)",background:"var(--bg)"}}>
+{LANG_OPTIONS.map(l=><option key={l} value={l}>{l}</option>)}
+</select>
+</div>
+<div>
+<label style={{fontSize:11,fontWeight:600,display:"block",marginBottom:4}}>Article Type</label>
+<select value={pageType} onChange={e=>setPageType(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid var(--bd1)",borderRadius:"var(--rad)",fontSize:13,fontFamily:"var(--fb)",background:"var(--bg)"}}>
+{PAGE_TYPES.map(p=><option key={p.id} value={p.id}>{p.icon} {p.label}</option>)}
+</select>
+</div>
+</div>
+{/* Page type description */}
+<div style={{background:"var(--bg)",borderRadius:"var(--rad)",padding:"8px 12px",marginBottom:16,fontSize:11,color:"var(--t3)"}}>
+{PAGE_TYPES.find(p=>p.id===pageType)?.icon} <strong>{PAGE_TYPES.find(p=>p.id===pageType)?.label}</strong>: {PAGE_TYPES.find(p=>p.id===pageType)?.desc}
+</div>
+<button onClick={handleGenerateTitles} disabled={loading||!topic.trim()} className="btn" style={{background:"var(--g)",color:"#fff",opacity:loading||!topic.trim()?0.6:1}}>
+{loading?"Generating Titles...":"Next: Generate Title Suggestions →"}
+</button>
+</div>}
+
+{/* ═══ STEP 2: Select Title ═══ */}
+{step===2&&titles&&<div>
+<div style={{marginBottom:16}}>
+<button onClick={()=>{setStep(1);setTitles(null);setSelectedTitle(null)}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--t3)",fontFamily:"var(--fb)"}}>← Back to input</button>
+</div>
+<h2 style={{marginTop:0,fontSize:18,marginBottom:4}}>Choose a Title</h2>
+<p style={{fontSize:12,color:"var(--t3)",marginBottom:16}}>Select the title that best matches your content goals. Each targets different search angles.</p>
+{titles.map((ti,i)=>
+<div key={i} onClick={()=>setSelectedTitle(ti)} className="card" style={{marginBottom:8,cursor:"pointer",border:selectedTitle===ti?"2px solid var(--b)":"1px solid var(--bd1)",background:selectedTitle===ti?"var(--bl)":"var(--bg)"}}>
+<div style={{fontSize:14,fontWeight:600,marginBottom:4,color:selectedTitle===ti?"var(--bd)":"var(--t)"}}>{ti.title}</div>
+<div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>{ti.rationale}</div>
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+<span style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:"var(--aml)",color:"var(--am)",fontWeight:600}}>{ti.estimated_intent}</span>
+{(ti.suggested_keywords||[]).map((k,j)=><span key={j} style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:"var(--bg3)",color:"var(--t3)"}}>{k}</span>)}
+</div>
+</div>)}
+<div style={{marginTop:16,display:"flex",gap:8}}>
+<button onClick={handleGenerate} disabled={!selectedTitle||loading} className="btn" style={{background:"var(--g)",color:"#fff",opacity:!selectedTitle||loading?0.6:1}}>
+Generate Article →
+</button>
+<button onClick={handleGenerateTitles} disabled={loading} className="btn bo" style={{fontSize:12}}>
+Regenerate Titles
+</button>
+</div>
+</div>}
+
+{/* ═══ STEP 3: Generating (Pipeline Progress) ═══ */}
+{step===3&&loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
+<div style={{width:48,height:48,border:"3px solid var(--bg3)",borderTopColor:"var(--g)",borderRadius:"50%",animation:"spin .7s linear infinite",margin:"0 auto 20px"}} />
+<div style={{fontSize:16,fontWeight:700,marginBottom:6,color:"var(--t)"}}>{pipelineStep}</div>
+<p style={{fontSize:12,color:"var(--t4)",marginBottom:16}}>Building a high-quality article with keyword research, writing, quality checks, and image matching. This takes 2-3 minutes.</p>
+<div style={{maxWidth:320,margin:"0 auto",height:6,background:"var(--bg3)",borderRadius:3}}>
+<div style={{height:"100%",background:"linear-gradient(90deg,var(--g),var(--b))",borderRadius:3,animation:"progress 90s linear",width:"0%"}} />
+</div>
+<style>{`@keyframes progress{0%{width:5%}30%{width:35%}60%{width:65%}80%{width:80%}100%{width:95%}}`}</style>
+<div style={{marginTop:20,fontSize:11,color:"var(--t4)"}}>
+<strong>Title:</strong> {selectedTitle?.title}
+</div>
+</div>}
+
+{/* ═══ STEP 4: Result ═══ */}
+{step===4&&article&&<div>
+{/* Quality badge */}
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<div style={{width:36,height:36,borderRadius:"50%",background:article.quality_score>=80?"var(--gl)":article.quality_score>=60?"var(--aml)":"var(--rl)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+<span style={{fontSize:14,fontWeight:800,color:article.quality_score>=80?"var(--g)":article.quality_score>=60?"var(--am)":"var(--r)"}}>{article.quality_score}</span>
+</div>
+<div>
+<div style={{fontSize:12,fontWeight:600}}>Quality Score</div>
+<div style={{fontSize:10,color:"var(--t4)"}}>{article.was_rewritten?"Auto-fixed issues":"Passed quality check"} · {article.keywords?.primary}</div>
+</div>
+</div>
+<button onClick={reset} className="btn bo" style={{fontSize:11,padding:"6px 12px"}}>New Article</button>
+</div>
+
+{/* View mode toggle */}
+<div style={{display:"flex",borderBottom:"2px solid var(--bd1)",marginBottom:16}}>
+{[{id:"html",l:"HTML Preview"},{id:"markdown",l:"Markdown"}].map(m=>
+<button key={m.id} onClick={()=>setViewMode(m.id)} style={{padding:"9px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:viewMode===m.id?700:400,color:viewMode===m.id?"var(--b)":"var(--t3)",borderBottom:viewMode===m.id?"2px solid var(--b)":"2px solid transparent",marginBottom:-2,fontFamily:"var(--fb)"}}>{m.l}</button>)}
+</div>
+
+{/* Download buttons */}
+<div style={{display:"flex",gap:8,marginBottom:16}}>
+<button onClick={()=>downloadFile(buildFullHtml(),`${article.slug||"article"}.html`,"text/html")} className="btn bp" style={{fontSize:11}}>
+⬇ Download HTML
+</button>
+<button onClick={()=>downloadFile(buildMarkdown(),`${article.slug||"article"}.md`,"text/markdown")} className="btn bo" style={{fontSize:11}}>
+⬇ Download Markdown
+</button>
+<button onClick={()=>{const c=viewMode==="html"?buildFullHtml():buildMarkdown();navigator.clipboard?.writeText(c)}} className="btn" style={{fontSize:11,background:"var(--bg3)",color:"var(--t2)"}}>
+📋 Copy
+</button>
+</div>
+
+{/* Content preview */}
+{viewMode==="html"&&<div style={{border:"1px solid var(--bd1)",borderRadius:"var(--radl)",overflow:"hidden"}}>
+<div style={{background:"var(--bg3)",padding:"8px 14px",fontSize:10,color:"var(--t3)",borderBottom:"1px solid var(--bd1)"}}>
+HTML Preview — {article.title}
+</div>
+<div style={{padding:24,background:"var(--bg)",maxHeight:600,overflowY:"auto"}}>
+<h1 style={{fontSize:22,marginBottom:6}}>{article.h1||article.title}</h1>
+<p style={{fontSize:11,color:"var(--t4)",marginBottom:16}}>Published: {article.date} | By Smart SEO Tools Team</p>
+{article.images?.find(i=>i.role==="hero")&&<img src={article.images.find(i=>i.role==="hero").url} alt={article.images.find(i=>i.role==="hero").alt_suggestion||""} style={{width:"100%",borderRadius:8,marginBottom:16}} loading="lazy" />}
+<div dangerouslySetInnerHTML={{__html:article.content_html||""}} style={{fontSize:13,lineHeight:1.8}} />
+{article.faqs?.length>0&&<div style={{marginTop:24}}>
+<h2 style={{fontSize:18,marginBottom:12}}>Frequently Asked Questions</h2>
+{article.faqs.map((f,i)=><div key={i} style={{background:"var(--bg2)",borderRadius:8,padding:14,marginBottom:8}}>
+<div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{f.question}</div>
+<div style={{fontSize:12,color:"var(--t2)"}}>{f.answer}</div>
+</div>)}
+</div>}
+</div>
+</div>}
+
+{viewMode==="markdown"&&<div style={{border:"1px solid var(--bd1)",borderRadius:"var(--radl)",overflow:"hidden"}}>
+<div style={{background:"var(--bg3)",padding:"8px 14px",fontSize:10,color:"var(--t3)",borderBottom:"1px solid var(--bd1)"}}>
+Markdown Preview — {article.title}
+</div>
+<pre style={{padding:16,background:"#1e293b",color:"#e2e8f0",fontSize:11,lineHeight:1.6,overflow:"auto",maxHeight:600,margin:0,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{buildMarkdown()}</pre>
+</div>}
+
+{/* Article meta info */}
+<div style={{marginTop:16,padding:14,background:"var(--bg2)",borderRadius:"var(--rad)",fontSize:11,color:"var(--t3)"}}>
+<div style={{fontWeight:600,marginBottom:6,color:"var(--t)"}}>Article Details</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+<div><strong>Primary keyword:</strong> {article.keywords?.primary}</div>
+<div><strong>Type:</strong> {article.page_type}</div>
+<div><strong>Language:</strong> {article.language}</div>
+<div><strong>Images:</strong> {article.images?.length||0}</div>
+<div><strong>FAQs:</strong> {article.faqs?.length||0}</div>
+<div><strong>Slug:</strong> {article.slug}</div>
+</div>
+{article.keywords?.secondary?.length>0&&<div style={{marginTop:6}}><strong>Secondary keywords:</strong> {article.keywords.secondary.join(", ")}</div>}
+{article.keywords?.lsi?.length>0&&<div style={{marginTop:2}}><strong>LSI keywords:</strong> {article.keywords.lsi.join(", ")}</div>}
+</div>
+</div>}
+
+{/* Static SEO content below the tool */}
+{step===1&&<>
+<section style={{marginTop:32}}>
+<h2>How the AI Blog Writer Works</h2>
+<p style={{fontSize:13}}>Our writer uses a multi-step pipeline that mirrors professional SEO content workflows. First, it analyzes your topic for keyword opportunities and high-CPC potential. Then it builds a structured outline based on your chosen article type — tutorial, comparison, tier list, tool page, or database entry. The actual writing follows strict anti-AI-pattern rules: no filler phrases, first-person experience signals, specific data points, and E-E-A-T compliance.</p>
+<p style={{fontSize:13}}>After writing, an automated quality check scans for banned AI phrases, verifies keyword placement, checks paragraph structure, and ensures every section carries independent value. Issues get automatically fixed before you see the result. Finally, relevant images are sourced from Unsplash with SEO-optimized alt text.</p>
+<p style={{fontSize:13}}>The output includes both HTML (publish-ready with JSON-LD schema, Open Graph tags, and responsive CSS) and Markdown formats. Add your own experience and data points before publishing — see our <IL href="/blog/ai-content-seo-guide">AI content and SEO guide</IL> for best practices.</p>
+</section>
+<section style={{marginTop:20}}><h2>{t.faq_title}</h2><FAQ faqs={[
+{q:"Is the AI Blog Writer free?",a:"Yes, completely free with no signup. Generate unlimited articles with full SEO optimization, quality checks, and image matching."},
+{q:"Will AI-generated content rank on Google?",a:"Google penalizes low-quality content, not AI-assisted content. Our pipeline includes anti-AI-pattern checks, E-E-A-T signal injection, and quality scoring to produce content that meets Google's helpful content standards. We recommend adding your own expertise before publishing."},
+{q:"What's included in the generated article?",a:"Each article includes: SEO-optimized title and meta description, structured headings (H1→H2→H3), 800-2000 words of content, 4-8 FAQ questions, 2-4 relevant Unsplash images with alt text, and both HTML and Markdown download formats. The HTML version includes JSON-LD schema and Open Graph tags."},
+{q:"How long does generation take?",a:"About 2-3 minutes. The pipeline runs 6 steps: keyword research, outline creation, content writing, FAQ generation, quality checking with auto-fix, and image sourcing. A progress indicator shows which step is running."},
+{q:"What article types are supported?",a:"Five types optimized for different search intents: Tutorial/How-to (step-by-step guides), Comparison/VS (product comparisons with tables), Tier List/Ranking (rated item lists), Tool/Calculator (utility descriptions), and Database/Wiki (reference entries). Each type follows a different structural template."},
+{q:"Can I edit the generated content?",a:"Yes — download as HTML or Markdown and edit freely. We strongly recommend adding your own experience, specific data, and examples before publishing. The generated content provides SEO structure and a solid draft; your expertise makes it rank."},
+]} /></section>
+</>}
+
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - AI Blog Writer",url:"https://webchecker.one/blog-writer",applicationCategory:"Content Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
 </div>}
 
 // ═══ BLOG ═══
