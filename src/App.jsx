@@ -262,39 +262,72 @@ async function handleGenerateTitles(){
   setLoading(false);
 }
 
-// Step 2 → 3: Generate article
+// Step 2 → 3: Generate article via sequential API calls
 async function handleGenerate(){
   if(!selectedTitle)return;
   setLoading(true);setError("");setStep(3);
-  const pipelineSteps=["Researching keywords...","Building article outline...","Writing content...","Generating FAQ section...","Quality check...","Fixing issues...","Fetching images...","Assembling final article..."];
-  let si=0;
-  setPipelineStep(pipelineSteps[0]);
-  const interval=setInterval(()=>{si++;if(si<pipelineSteps.length)setPipelineStep(pipelineSteps[si]);},12000);
-  try{
-    // Generate article
-    const r=await fetch("/api/writer-generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:selectedTitle.title,topic,keyword,language:wLang,pageType,suggestedKeywords:selectedTitle.suggested_keywords||[]})});
-    if(!r.ok)throw new Error(`API ${r.status}`);
-    const d=await r.json();
-    if(!d.success)throw new Error(d.error||"Generation failed");
 
-    // Fetch images
+  const post=async(url,body)=>{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok){const t=await r.text();throw new Error(`${url} returned ${r.status}: ${t}`)}return r.json()};
+  const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+
+  try{
+    // Step 1: Keywords
+    setPipelineStep("Researching keywords...");
+    const kwData=await post("/api/writer-keywords",{topic,keyword,language:wLang,pageType});
+    await wait(2000);
+
+    // Step 2: Outline
+    setPipelineStep("Building article outline...");
+    const outlineData=await post("/api/writer-outline",{title:selectedTitle.title,topic,language:wLang,pageType,keywords:kwData});
+    await wait(2000);
+
+    // Step 3: Write article
+    setPipelineStep("Writing content (this takes a moment)...");
+    const articleData=await post("/api/writer-article",{title:selectedTitle.title,language:wLang,pageType,outline:outlineData,keywords:kwData});
+    await wait(2000);
+
+    // Step 4: FAQ
+    setPipelineStep("Generating FAQ section...");
+    const faqData=await post("/api/writer-faq",{topic,title:selectedTitle.title,language:wLang,keywords:kwData,faqQuestions:outlineData.faq_questions||[]});
+    await wait(2000);
+
+    // Step 5: Quality check + fix
+    setPipelineStep("Quality check & auto-fix...");
+    const checkData=await post("/api/writer-check",{content_html:articleData.content_html,language:wLang,primaryKeyword:kwData.primary_keyword,entityTerms:kwData.entity_terms||[],h1:outlineData.h1||selectedTitle.title});
+
+    // Step 6: Fetch images
     setPipelineStep("Fetching images...");
-    const imgQueries=(d.article.image_queries||[]).map((q,i)=>({query:q,role:i===0?"hero":`section-${i}`}));
+    const imgQueries=(outlineData.image_queries||[]).map((q,i)=>({query:q,role:i===0?"hero":`section-${i}`}));
     let images=[];
     if(imgQueries.length>0){
       try{
-        const ir=await fetch("/api/writer-images",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({queries:imgQueries})});
-        if(ir.ok){const id=await ir.json();images=id.images||[];}
+        const id=await post("/api/writer-images",{queries:imgQueries});
+        images=id.images||[];
       }catch(e){console.error("Image fetch failed:",e)}
     }
 
-    // Assemble final article with images
+    // Assemble
     setPipelineStep("Assembling final article...");
-    const assembledArticle={...d.article,images};
-    setArticle(assembledArticle);
+    const today=new Date().toISOString().split("T")[0];
+    const slug=selectedTitle.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60);
+    setArticle({
+      title:selectedTitle.title,
+      h1:outlineData.h1||selectedTitle.title,
+      meta_description:outlineData.meta_description||"",
+      slug,
+      language:wLang,
+      page_type:pageType,
+      date:today,
+      keywords:{primary:kwData.primary_keyword,secondary:kwData.secondary_keywords||[],lsi:kwData.lsi_keywords||[]},
+      content_html:checkData.fixed_html||articleData.content_html,
+      faqs:faqData.faqs||[],
+      images,
+      quality_score:checkData.score||75,
+      was_rewritten:checkData.issues_fixed>0,
+    });
     setStep(4);
-  }catch(e){setError("Generation failed: "+e.message);setStep(2)}
-  clearInterval(interval);setLoading(false);
+  }catch(e){console.error("Pipeline error:",e);setError("Generation failed: "+e.message);setStep(2)}
+  setLoading(false);
 }
 
 // Build full HTML document for download/preview

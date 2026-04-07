@@ -1,5 +1,31 @@
 {
   "rewrites": [
     { "source": "/((?!api|assets|favicon|robots|sitemap).*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/writer-generate.js": {
+      "maxDuration": 60
+    },
+    "api/writer-titles.js": {
+      "maxDuration": 60
+    },
+    "api/writer-images.js": {
+      "maxDuration": 60
+    },
+    "api/writer-keywords.js": {
+      "maxDuration": 60
+    },
+    "api/writer-outline.js": {
+      "maxDuration": 60
+    },
+    "api/writer-article.js": {
+      "maxDuration": 60
+    },
+    "api/writer-faq.js": {
+      "maxDuration": 60
+    },
+    "api/writer-check.js": {
+      "maxDuration": 60
+    }
+  }
 }
