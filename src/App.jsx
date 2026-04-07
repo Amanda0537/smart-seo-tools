@@ -274,22 +274,22 @@ async function handleGenerate(){
     // Step 1: Keywords
     setPipelineStep("Researching keywords...");
     const kwData=await post("/api/writer-keywords",{topic,keyword,language:wLang,pageType});
-    await wait(2000);
+    await wait(500);
 
     // Step 2: Outline
     setPipelineStep("Building article outline...");
     const outlineData=await post("/api/writer-outline",{title:selectedTitle.title,topic,language:wLang,pageType,keywords:kwData});
-    await wait(2000);
+    await wait(500);
 
     // Step 3: Write article
     setPipelineStep("Writing content (this takes a moment)...");
     const articleData=await post("/api/writer-article",{title:selectedTitle.title,language:wLang,pageType,outline:outlineData,keywords:kwData});
-    await wait(2000);
+    await wait(500);
 
     // Step 4: FAQ
     setPipelineStep("Generating FAQ section...");
     const faqData=await post("/api/writer-faq",{topic,title:selectedTitle.title,language:wLang,keywords:kwData,faqQuestions:outlineData.faq_questions||[]});
-    await wait(2000);
+    await wait(500);
 
     // Step 5: Quality check + fix
     setPipelineStep("Quality check & auto-fix...");
