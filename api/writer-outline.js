@@ -1,3 +1,39 @@
+// Attempt to fix truncated JSON
+function fixJSON(str) {
+  let s = str.replace(/```json|```/g, "").trim();
+  try { return JSON.parse(s); } catch (_) {}
+
+  // Try closing open strings and brackets
+  // Count open brackets
+  let openBraces = 0, openBrackets = 0, inString = false, escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"' && !escaped) { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{") openBraces++;
+    if (c === "}") openBraces--;
+    if (c === "[") openBrackets++;
+    if (c === "]") openBrackets--;
+  }
+
+  // If in a string, close it
+  if (inString) s += '"';
+  // Close arrays and objects
+  while (openBrackets > 0) { s += "]"; openBrackets--; }
+  while (openBraces > 0) { s += "}"; openBraces--; }
+
+  try { return JSON.parse(s); } catch (_) {}
+
+  // Last resort: try to find the last complete object
+  const lastBrace = s.lastIndexOf("}");
+  if (lastBrace > 0) {
+    try { return JSON.parse(s.slice(0, lastBrace + 1)); } catch (_) {}
+  }
+  throw new Error("Could not parse JSON even after repair attempts");
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -15,98 +51,39 @@ export default async function handler(req, res) {
     const lang = language || "English";
     const type = pageType || "tutorial";
 
-    const pageTypeStructures = {
-      tutorial: `Tutorial/How-to structure:
-1. H2: Quick Answer / Fastest Method — give the conclusion FIRST, then explain
-2. H2: Detailed Steps — each step as H3 with specific details, screenshots described, data
-3. H2: Common Mistakes / Troubleshooting — capture frustrated searchers
-4. H2: Advanced Tips (optional, for power users)
-5. H2: FAQ (4-8 questions from People Also Ask)
-RULE: Opening paragraph gives the answer right away ("The fastest way to X is...")`,
-      comparison: `Comparison/VS structure:
-1. H2: Quick Verdict — clear recommendation with reasoning, NOT "both are great"
-2. H2: Side-by-Side Comparison — MUST include HTML <table> with feature rows
-3. H2: Deep Dive — detailed analysis of 3-5 key differentiators
-4. H2: Pricing Comparison — specific numbers, not "varies"
-5. H2: Who Should Choose What — scenario-based: "If you need X, pick A. If Y matters, pick B."
-6. H2: FAQ (4-8 questions)
-RULE: Take a clear stance. Sitting on the fence adds zero value.`,
-      tierlist: `Tier List/Ranking structure:
-1. H2: Scoring Criteria — explain methodology (not "we just feel like it")
-2. H2: S Tier — each item gets 2-4 sentences with specific data/reasoning
-3. H2: A Tier — same depth
-4. H2: B Tier
-5. H2: C Tier (fewer tiers if appropriate)
-6. H2: How to Choose What's Right for You
-7. H2: FAQ (4-8 questions)
-RULE: Every ranked item needs concrete reasoning — data, mechanics, comparisons. "Very strong" is NOT analysis.`,
-      tool: `Tool/Calculator structure:
-1. H2: How to Use [Tool Name] — 3-5 steps as H3s
-2. H2: Features / Supported Formats
-3. H2: Use Cases / When You Need This
-4. H2: FAQ (focus: free? formats? limits? accuracy?)
-5. H2: Related Tools
-RULE: Include a worked example (Input X → Output Y)`,
-      database: `Database/Encyclopedia structure:
-1. H2: [Entry] Key Data — table with core stats/specs AT THE TOP
-2. H2: How It Works / Mechanics — explain the underlying system
-3. H2: Practical Applications / Best Use Cases
-4. H2: Related Entries
-RULE: Core data in a structured table first, explanation second`
+    const structures = {
+      tutorial: `Tutorial: 1)Quick Answer(conclusion first) 2)Detailed Steps(H3 each) 3)Common Mistakes 4)Advanced Tips 5)FAQ`,
+      comparison: `Comparison: 1)Quick Verdict(pick a winner) 2)Comparison Table 3)Deep Dive 4)Pricing 5)Who Should Choose What 6)FAQ`,
+      tierlist: `Tier List: 1)Scoring Criteria 2)S Tier 3)A Tier 4)B Tier 5)C Tier 6)How to Choose 7)FAQ`,
+      tool: `Tool Page: 1)How to Use(3-5 steps) 2)Features 3)Use Cases 4)FAQ 5)Related Tools`,
+      database: `Database: 1)Key Data Table 2)How It Works 3)Practical Applications 4)Related Entries`
     };
 
-    const system = `You are an SEO content architect. Return ONLY valid JSON. Plan in ${lang}.
+    const system = `You are an SEO content architect. Return ONLY valid JSON, keep it COMPACT. Plan in ${lang}.
 
-Create a detailed article outline. CRITICAL requirements:
+STRUCTURE: ${structures[type] || structures.tutorial}
 
-STRUCTURE RULES:
-${pageTypeStructures[type] || pageTypeStructures.tutorial}
+RULES:
+- Every H2 independently valuable, conclusion-first pattern
+- Each section ≥150 words target
+- H1: like title but more conversational, MUST include primary keyword, NEVER use "Comprehensive/Ultimate/Complete Guide"
+- Meta desc: 120-160 chars, complements title
+- Plan 2-4 internal links (anchors like "free SEO audit tool" not "click here")
+- Plan 1 CTA in key_points of a relevant section
+- FAQ: 4-8 questions from People Also Ask
+- Images: 2-3 specific visual descriptions (no generic stock)
 
-OUTLINE QUALITY RULES:
-1. Every H2 section MUST be independently valuable — could answer a user question on its own
-2. Every H2 MUST follow "conclusion first, explanation second" pattern
-3. Each section target_words MUST be ≥ 150 words (most should be 200-300)
-4. Total article target: 1,200-1,500 words
-5. H2 headings must contain semantic keyword variations (not just the primary keyword repeated)
+COMPACT JSON format (keep short to avoid truncation):
+{"meta_description":"120-160 chars","h1":"conversational title with keyword","sections":[{"h2":"heading","h3s":["sub1","sub2"],"key_points":["point1","point2","INTERNAL LINK: anchor text → /path","CTA: action text → /path"]}],"faq_questions":["q1","q2","q3","q4"],"image_queries":["hero desc","section1 desc"]}
 
-INTERNAL LINKING PLAN (审核指南第七关):
-Plan 2-4 internal links to other pages on the site. Use descriptive anchor text, NEVER "click here" or "learn more". Format: "check our [topic] guide" or use the target keyword directly.
+Keep key_points to 2-4 items per section. Keep h3s to 2-3 per section. This prevents JSON truncation.`;
 
-CTA PLAN (审核指南第七关):
-Plan at least 1 clear call-to-action appropriate to the page type:
-- Tool page → "Try our free [tool]"
-- Tutorial → "Follow these steps now" or link to related tool
-- Comparison → "Use our audit tool to check your site"
-- Tier List → "See our detailed [item] guide"
+    const kw = keywords || {};
+    const message = `Title: "${title}" | Topic: "${topic}" | Type: ${type} | Lang: ${lang}
+Primary: ${kw.primary_keyword || ""} | Secondary: ${(kw.secondary_keywords || []).slice(0, 3).join(", ")}
+Entity terms: ${(kw.entity_terms || []).slice(0, 5).join(", ")}
 
-Return format:
-{
-  "meta_description": "120-160 characters, complements title, says what problem page solves + why click",
-  "h1": "similar to title but more conversational, includes primary keyword, NO banned phrases (no Comprehensive/Ultimate/Complete Guide)",
-  "sections": [
-    {
-      "h2": "heading with semantic keyword variation",
-      "h3s": ["subsection 1", "subsection 2"],
-      "key_points": ["specific data/example to include", "case study or comparison"],
-      "conclusion_first": "the main takeaway this section delivers upfront",
-      "target_words": 200
-    }
-  ],
-  "internal_links": [
-    {"anchor_text": "descriptive anchor", "target_page": "/seo-audit or /blog-writer or /blog/[slug]", "placement": "which section to place it in"}
-  ],
-  "cta": {"text": "call to action text", "placement": "which section", "link": "target URL"},
-  "faq_questions": ["4-8 questions from real People Also Ask patterns"],
-  "image_queries": ["specific visual description for hero", "specific visual for section 1", "specific visual for section 2"]
-}`;
-
-    const message = `Title: "${title}"\nTopic: "${topic}"\nPage type: ${type}\nLanguage: ${lang}\nKeyword strategy:\n${JSON.stringify(keywords || {}, null, 2)}\n\nCRITICAL:
-- h1 must NOT contain "Comprehensive Guide", "Ultimate Guide", "Complete Guide"
-- Every section needs conclusion_first filled in
-- Plan 2-4 internal links with descriptive anchors
-- Plan at least 1 CTA
-- image_queries must describe specific relevant visuals, never generic stock photos
-- FAQ questions from real search patterns, not made up`;
+Generate compact outline. h1 MUST NOT contain "Comprehensive/Ultimate/Complete Guide". Include internal links and CTA inside key_points.`;
 
     const r = await fetch("https://api.moonshot.cn/v1/chat/completions", {
       method: "POST",
@@ -115,7 +92,16 @@ Return format:
     });
     if (!r.ok) { const t = await r.text(); return res.status(r.status).json({ error: `Kimi ${r.status}`, detail: t }); }
     const d = await r.json();
-    const parsed = JSON.parse((d.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim());
+    const raw = d.choices?.[0]?.message?.content || "";
+    const parsed = fixJSON(raw);
+
+    // Ensure minimum structure
+    if (!parsed.sections) parsed.sections = [];
+    if (!parsed.faq_questions) parsed.faq_questions = [];
+    if (!parsed.image_queries) parsed.image_queries = [];
+    if (!parsed.h1) parsed.h1 = title;
+    if (!parsed.meta_description) parsed.meta_description = "";
+
     return res.status(200).json(parsed);
   } catch (e) {
     console.error("Outline error:", e);

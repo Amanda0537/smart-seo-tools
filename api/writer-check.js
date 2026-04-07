@@ -106,7 +106,48 @@ CRITICAL: fixed_html must contain the COMPLETE article, not just the changed par
     if (!r.ok) { const t = await r.text(); return res.status(r.status).json({ error: `Kimi ${r.status}`, detail: t }); }
     const d = await r.json();
     const text = d.choices?.[0]?.message?.content || "";
-    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+
+    // Try to parse, with fallback for truncated JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+    } catch (parseErr) {
+      // If JSON is truncated (common with long fixed_html), try to extract what we can
+      console.error("Check JSON parse failed, attempting recovery:", parseErr.message);
+
+      // Try to find fixed_html field even in broken JSON
+      const htmlMatch = text.match(/"fixed_html"\s*:\s*"([\s\S]*?)(?:"\s*[,}]|$)/);
+      const scoreMatch = text.match(/"score"\s*:\s*(\d+)/);
+      const summaryMatch = text.match(/"summary"\s*:\s*"([^"]*?)"/);
+
+      if (htmlMatch) {
+        // Unescape the extracted HTML
+        let extractedHtml = htmlMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+        parsed = {
+          score: scoreMatch ? parseInt(scoreMatch[1]) : 75,
+          issues_found: 0,
+          issues_fixed: 0,
+          summary: summaryMatch ? summaryMatch[1] : "Partial quality check completed",
+          fixed_html: extractedHtml,
+        };
+      } else {
+        // Complete failure — return original content
+        parsed = {
+          score: 70,
+          issues_found: 0,
+          issues_fixed: 0,
+          summary: "Quality check response was truncated. Original content returned.",
+          fixed_html: content_html,
+        };
+      }
+    }
+
+    // Final safety: if fixed_html is missing or too short, use original
+    if (!parsed.fixed_html || parsed.fixed_html.length < content_html.length * 0.3) {
+      parsed.fixed_html = content_html;
+      parsed.summary = (parsed.summary || "") + " (Used original content due to truncation)";
+    }
+
     return res.status(200).json(parsed);
   } catch (error) {
     console.error("Quality check error:", error);
