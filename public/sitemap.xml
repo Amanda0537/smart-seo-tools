@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://webchecker.one/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://webchecker.one/seo-audit</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://webchecker.one/blog-writer</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://webchecker.one/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://webchecker.one/blog/how-to-do-seo-audit-2026</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://webchecker.one/blog/core-web-vitals-guide</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://webchecker.one/blog/ai-content-seo-guide</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://webchecker.one/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://webchecker.one/contact</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://webchecker.one/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://webchecker.one/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>
