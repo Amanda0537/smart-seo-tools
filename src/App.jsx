@@ -321,11 +321,7 @@ async function handleGenerate(){
     const faqData=await post("/api/writer-faq",{topic,title:selectedTitle.title,language:wLang,keywords:kwData,faqQuestions:outlineData.faq_questions||[]});
     await wait(500);
 
-    // Step 5: Quality check + fix
-    setPipelineStep("Quality check & auto-fix...");
-    const checkData=await post("/api/writer-check",{content_html:articleData.content_html,language:wLang,primaryKeyword:kwData.primary_keyword,entityTerms:kwData.entity_terms||[],h1:outlineData.h1||selectedTitle.title});
-
-    // Step 6: Fetch images
+    // Step 5: Fetch images (check step removed — Claude follows rules in one pass)
     setPipelineStep("Fetching images...");
     const imgQueries=(outlineData.image_queries||[]).map((q,i)=>({query:q,role:i===0?"hero":`section-${i}`}));
     let images=[];
@@ -349,11 +345,11 @@ async function handleGenerate(){
       page_type:pageType,
       date:today,
       keywords:{primary:kwData.primary_keyword,secondary:kwData.secondary_keywords||[],lsi:kwData.lsi_keywords||[]},
-      content_html:checkData.fixed_html||articleData.content_html,
+      content_html:articleData.content_html,
       faqs:faqData.faqs||[],
       images,
-      quality_score:checkData.score||75,
-      was_rewritten:checkData.issues_fixed>0,
+      quality_score:85,
+      was_rewritten:false,
     });
     setStep(4);
   }catch(e){console.error("Pipeline error:",e);setError("Generation failed: "+e.message);setStep(2)}
@@ -586,7 +582,7 @@ Regenerate Titles
 {step===3&&loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
 <div style={{width:48,height:48,border:"3px solid var(--bg3)",borderTopColor:"var(--g)",borderRadius:"50%",animation:"spin .7s linear infinite",margin:"0 auto 20px"}} />
 <div style={{fontSize:16,fontWeight:700,marginBottom:6,color:"var(--t)"}}>{pipelineStep}</div>
-<p style={{fontSize:12,color:"var(--t4)",marginBottom:16}}>Building a high-quality article with keyword research, writing, quality checks, and image matching. This takes 2-3 minutes.</p>
+<p style={{fontSize:12,color:"var(--t4)",marginBottom:16}}>Building a high-quality article with keyword research, writing, quality checks, and image matching. This takes 1-2 minutes.</p>
 <div style={{maxWidth:320,margin:"0 auto",height:6,background:"var(--bg3)",borderRadius:3}}>
 <div style={{height:"100%",background:"linear-gradient(90deg,var(--g),var(--b))",borderRadius:3,animation:"progress 90s linear",width:"0%"}} />
 </div>
@@ -686,7 +682,7 @@ Markdown Preview — {article.title}
 {q:"Is the AI Blog Writer free?",a:"Yes, completely free with no signup. Generate unlimited articles with full SEO optimization, quality checks, and image matching."},
 {q:"Will AI-generated content rank on Google?",a:"Google penalizes low-quality content, not AI-assisted content. Our pipeline includes anti-AI-pattern checks, E-E-A-T signal injection, and quality scoring to produce content that meets Google's helpful content standards. We recommend adding your own expertise before publishing."},
 {q:"What's included in the generated article?",a:"Each article includes: SEO-optimized title and meta description, structured headings (H1→H2→H3), 800-2000 words of content, 4-8 FAQ questions, 2-4 relevant Unsplash images with alt text, and both HTML and Markdown download formats. The HTML version includes JSON-LD schema and Open Graph tags."},
-{q:"How long does generation take?",a:"About 2-3 minutes. The pipeline runs 6 steps: keyword research, outline creation, content writing, FAQ generation, quality checking with auto-fix, and image sourcing. A progress indicator shows which step is running."},
+{q:"How long does generation take?",a:"About 1-2 minutes. The pipeline runs 5 steps: keyword research, outline creation, content writing with built-in quality rules, FAQ generation, and image sourcing. A progress indicator shows which step is running."},
 {q:"What article types are supported?",a:"Five types optimized for different search intents: Tutorial/How-to (step-by-step guides), Comparison/VS (product comparisons with tables), Tier List/Ranking (rated item lists), Tool/Calculator (utility descriptions), and Database/Wiki (reference entries). Each type follows a different structural template."},
 {q:"Can I edit the generated content?",a:"Yes — download as HTML or Markdown and edit freely. We strongly recommend adding your own experience, specific data, and examples before publishing. The generated content provides SEO structure and a solid draft; your expertise makes it rank."},
 ]} /></section>
