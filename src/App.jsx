@@ -281,9 +281,39 @@ async function handleGenerate(){
     const outlineData=await post("/api/writer-outline",{title:selectedTitle.title,topic,language:wLang,pageType,keywords:kwData});
     await wait(500);
 
-    // Step 3: Write article
-    setPipelineStep("Writing content (this takes a moment)...");
-    const articleData=await post("/api/writer-article",{title:selectedTitle.title,language:wLang,pageType,outline:outlineData,keywords:kwData});
+    // Step 3: Write article (streaming to avoid timeout)
+    setPipelineStep("Writing content (streaming)...");
+    const articleHtml = await (async () => {
+      const r = await fetch("/api/writer-article", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: selectedTitle.title, language: wLang, pageType, outline: outlineData, keywords: kwData }) });
+      if (!r.ok) { const t = await r.text(); throw new Error(`/api/writer-article returned ${r.status}: ${t}`); }
+      // Check if streaming (SSE) or regular JSON
+      const ct = r.headers.get("content-type") || "";
+      if (ct.includes("text/event-stream")) {
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let full = "", buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n"); buf = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.slice(6));
+              if (evt.type === "delta") full += evt.text;
+              else if (evt.type === "done") full = evt.content_html || full;
+              else if (evt.type === "error") throw new Error(evt.error);
+            } catch (_) {}
+          }
+        }
+        return full;
+      } else {
+        const d = await r.json();
+        return d.content_html || "";
+      }
+    })();
+    const articleData = { content_html: articleHtml };
     await wait(500);
 
     // Step 4: FAQ
