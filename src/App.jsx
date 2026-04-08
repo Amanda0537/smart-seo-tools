@@ -60,8 +60,8 @@ a{color:var(--b);text-decoration:none}a:hover{text-decoration:underline}h1,h2,h3
 @keyframes spin{to{transform:rotate(360deg)}}
 `;
 
-function IL({href,children,style:s,...p}){return <a href={href} onClick={e=>{e.preventDefault();window.dispatchEvent(new CustomEvent("nav",{detail:href}))}} style={s} {...p}>{children}</a>}
-function Bc({items}){return <nav aria-label="Breadcrumb" style={{fontSize:12,color:"var(--t4)",marginBottom:16,display:"flex",gap:4,flexWrap:"wrap"}}>{items.map((it,i)=><span key={i} style={{display:"flex",gap:4}}>{i>0&&<span style={{color:"var(--bd2)"}}>/</span>}{it.href?<IL href={it.href} style={{color:"var(--t3)",fontSize:12}}>{it.label}</IL>:<span style={{color:"var(--t2)",fontWeight:500}}>{it.label}</span>}</span>)}<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:items.map((it,i)=>({"@type":"ListItem",position:i+1,name:it.label,...(it.href?{item:`https://webchecker.one${it.href}`}:{})}))})}} /></nav>}
+function IL({href,children,style:s,onClick:oc,...p}){return <a href={href} onClick={e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.button===1)return;e.preventDefault();if(typeof window!=="undefined"&&window.location.pathname!==href){window.history.pushState(null,"",href)}window.dispatchEvent(new CustomEvent("nav",{detail:href}));if(oc)oc(e)}} style={s} {...p}>{children}</a>}
+function Bc({items}){return <nav aria-label="Breadcrumb" style={{fontSize:12,color:"var(--t4)",marginBottom:16,display:"flex",gap:4,flexWrap:"wrap"}}>{items.map((it,i)=><span key={i} style={{display:"flex",gap:4}}>{i>0&&<span style={{color:"var(--bd2)"}}>/</span>}{it.href?<IL href={it.href} style={{color:"var(--t3)",fontSize:12}}>{it.label}</IL>:<span style={{color:"var(--t2)",fontWeight:500}}>{it.label}</span>}</span>)}<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:items.map((it,i)=>({"@type":"ListItem",position:i+1,name:it.label,...(it.href?{item:`https://www.webchecker.one${it.href}`}:{})}))})}} /></nav>}
 
 function FAQ({faqs}){const[o,sO]=useState(null);return <div>{faqs.map((f,i)=><div key={i} style={{borderBottom:"1px solid var(--bd1)"}}><button onClick={()=>sO(o===i?null:i)} style={{width:"100%",padding:"14px 0",background:"none",border:"none",textAlign:"left",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"var(--fb)",color:"var(--t)",gap:12}}><span>{f.q}</span><span style={{transform:o===i?"rotate(180deg)":"",transition:".2s",fontSize:12}}>▾</span></button>{o===i&&<div style={{padding:"0 0 14px",fontSize:13,color:"var(--t2)",lineHeight:1.7}}>{f.a}</div>}</div>)}<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"FAQPage",mainEntity:faqs.map(f=>({"@type":"Question",name:f.q,acceptedAnswer:{"@type":"Answer",text:f.a}}))})}} /></div>}
 
@@ -148,7 +148,7 @@ return <div>
 ]} /></div>
 </div></section>
 
-<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebSite",name:"Smart SEO Tools",url:"https://webchecker.one",description:"AI-powered SEO audit and content tools.",potentialAction:{"@type":"SearchAction",target:"https://webchecker.one/seo-audit?q={search_term_string}","query-input":"required name=search_term_string"}})}} />
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebSite",name:"Smart SEO Tools",url:"https://www.webchecker.one",description:"AI-powered SEO audit and content tools.",potentialAction:{"@type":"SearchAction",target:"https://www.webchecker.one/seo-audit?q={search_term_string}","query-input":"required name=search_term_string"}})}} />
 </div>}
 
 function DemoSection({lang,close}){const t=T[lang]||T.en;const r=DEMO;const[tab,sTab]=useState("overview");
@@ -219,7 +219,7 @@ return <div className="c" style={{padding:"28px 24px 72px",maxWidth:800}}>
 {tab==="actions"&&[{l:"P0",it:res.p0_actions,bg:"var(--rl)",c:"var(--r)"},{l:"P1",it:res.p1_actions,bg:"var(--aml)",c:"var(--am)"},{l:"P2",it:res.p2_actions,bg:"var(--bl)",c:"var(--b)"}].map((g,i)=><div key={i} style={{background:g.bg,borderRadius:"var(--rad)",padding:12,marginBottom:6}}><div style={{fontSize:12,fontWeight:700,color:g.c,marginBottom:4}}>{g.l}</div>{(g.it||[]).map((item,j)=><div key={j} style={{fontSize:11,color:"var(--t2)",marginBottom:2,paddingLeft:12,position:"relative"}}><span style={{position:"absolute",left:0}}>→</span>{item}</div>)}</div>)}
 <div style={{textAlign:"center",marginTop:16}}><button onClick={()=>{sPh("ready");sR(null);sU("");sH("")}} className="btn bo">{t.run_another}</button></div>
 </div>}
-<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - SEO Audit",url:"https://webchecker.one/seo-audit",applicationCategory:"SEO Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - SEO Audit",url:"https://www.webchecker.one/seo-audit",applicationCategory:"SEO Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
 </div>}
 
 // ═══ WRITER PAGE ═══
@@ -688,7 +688,7 @@ Markdown Preview — {article.title}
 ]} /></section>
 </>}
 
-<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - AI Blog Writer",url:"https://webchecker.one/blog-writer",applicationCategory:"Content Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"WebApplication",name:"Smart SEO Tools - AI Blog Writer",url:"https://www.webchecker.one/blog-writer",applicationCategory:"Content Tool",operatingSystem:"Web",offers:{"@type":"Offer",price:"0",priceCurrency:"USD"}})}} />
 </div>}
 
 // ═══ BLOG ═══
@@ -895,7 +895,7 @@ return <article className="c" style={{padding:"28px 24px 72px",maxWidth:700}}>
 {content}
 </div>
 <section style={{marginTop:36,paddingTop:20,borderTop:"1px solid var(--bd1)"}}><h2 style={{marginTop:0}}>{t.related}</h2>{BLOG_POSTS.filter(x=>x.slug!==slug).map(x=><IL key={x.slug} href={`/blog/${x.slug}`} style={{display:"block",padding:12,border:"1px solid var(--bd1)",borderRadius:"var(--rad)",marginBottom:6}}><div style={{fontWeight:600,color:"var(--t)",fontSize:13}}>{x.title}</div><div style={{fontSize:10,color:"var(--t4)",marginTop:2}}>{x.rt} {t.min_read}</div></IL>)}</section>
-<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:p.title,description:p.desc,datePublished:p.date,dateModified:p.updated,author:{"@type":"Organization",name:"Smart SEO Tools"},publisher:{"@type":"Organization",name:"Smart SEO Tools"},mainEntityOfPage:`https://webchecker.one/blog/${p.slug}`})}} />
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:p.title,description:p.desc,datePublished:p.date,dateModified:p.updated,author:{"@type":"Organization",name:"Smart SEO Tools"},publisher:{"@type":"Organization",name:"Smart SEO Tools"},mainEntityOfPage:`https://www.webchecker.one/blog/${p.slug}`})}} />
 </article>}
 
 // ═══ STATIC PAGES ═══
@@ -909,10 +909,17 @@ function Terms({lang}){const t=T[lang]||T.en;return <div className="c" style={{p
 
 // ═══ APP ═══
 export default function App(){
-const[path,sP]=useState("/");const[lang,sL]=useState(()=>{const n=(navigator.language||"en").split("-")[0].toLowerCase();return LANGS[n]?n:"en"});
-useEffect(()=>{const h=e=>{sP(e.detail);window.scrollTo(0,0)};window.addEventListener("nav",h);return()=>window.removeEventListener("nav",h)},[]);
-useEffect(()=>{const m={"/":{t:"Smart SEO Tools - Free AI SEO Audit & Blog Writer",d:"Free AI-powered SEO audit tool. Check technical SEO, on-page, content quality, Core Web Vitals. Prioritized fix list in 30 seconds.",c:"https://webchecker.one/"},"/seo-audit":{t:"Free SEO Audit Tool - Website SEO Checker | SmartSEO",d:"Run a free SEO audit on any website. Check technical SEO, on-page, content, mobile. Get prioritized fixes.",c:"https://webchecker.one/seo-audit"},"/blog-writer":{t:"AI SEO Blog Writer - Generate Optimized Posts | SmartSEO",d:"Create SEO-optimized blog posts with AI. Proper headings, meta descriptions, FAQ sections. Free.",c:"https://webchecker.one/blog-writer"},"/blog":{t:"SEO Blog - Tips & Guides for Rankings | SmartSEO",d:"Practical SEO guides. Technical SEO, content, Core Web Vitals, algorithm updates. Updated weekly.",c:"https://webchecker.one/blog"},"/about":{t:"About Smart SEO Tools - Mission & Team",d:"Built by SEO practitioners for accessible analysis. Our mission to democratize SEO with AI tools.",c:"https://webchecker.one/about"},"/contact":{t:"Contact Us | Smart SEO Tools",d:"Questions about Smart SEO Tools? We respond within 24 hours.",c:"https://webchecker.one/contact"},"/privacy-policy":{t:"Privacy Policy | Smart SEO Tools",d:"How we collect, use, protect your data. Covers cookies, analytics, AdSense, your rights.",c:"https://webchecker.one/privacy-policy"},"/terms":{t:"Terms of Service | Smart SEO Tools",d:"Terms for using Smart SEO Tools. Rights, obligations, conditions.",c:"https://webchecker.one/terms"}};
-let e=m[path];if(!e&&path.startsWith("/blog/")){const p=BLOG_POSTS.find(x=>`/blog/${x.slug}`===path);if(p)e={t:p.title,d:p.desc,c:`https://webchecker.one/blog/${p.slug}`}}
+const[path,sP]=useState(()=>typeof window!=="undefined"?(window.location.pathname||"/"):"/");
+const[lang,sL]=useState(()=>{if(typeof navigator==="undefined")return "en";const n=(navigator.language||"en").split("-")[0].toLowerCase();return LANGS[n]?n:"en"});
+useEffect(()=>{
+  const onNav=e=>{sP(e.detail);window.scrollTo(0,0)};
+  const onPop=()=>{sP(window.location.pathname||"/");window.scrollTo(0,0)};
+  window.addEventListener("nav",onNav);
+  window.addEventListener("popstate",onPop);
+  return()=>{window.removeEventListener("nav",onNav);window.removeEventListener("popstate",onPop)}
+},[]);
+useEffect(()=>{const m={"/":{t:"Smart SEO Tools - Free AI SEO Audit & Blog Writer",d:"Free AI-powered SEO audit tool. Check technical SEO, on-page, content quality, Core Web Vitals. Prioritized fix list in 30 seconds.",c:"https://www.webchecker.one/"},"/seo-audit":{t:"Free SEO Audit Tool - Website SEO Checker | SmartSEO",d:"Run a free SEO audit on any website. Check technical SEO, on-page, content, mobile. Get prioritized fixes.",c:"https://www.webchecker.one/seo-audit"},"/blog-writer":{t:"AI SEO Blog Writer - Generate Optimized Posts | SmartSEO",d:"Create SEO-optimized blog posts with AI. Proper headings, meta descriptions, FAQ sections. Free.",c:"https://www.webchecker.one/blog-writer"},"/blog":{t:"SEO Blog - Tips & Guides for Rankings | SmartSEO",d:"Practical SEO guides. Technical SEO, content, Core Web Vitals, algorithm updates. Updated weekly.",c:"https://www.webchecker.one/blog"},"/about":{t:"About Smart SEO Tools - Mission & Team",d:"Built by SEO practitioners for accessible analysis. Our mission to democratize SEO with AI tools.",c:"https://www.webchecker.one/about"},"/contact":{t:"Contact Us | Smart SEO Tools",d:"Questions about Smart SEO Tools? We respond within 24 hours.",c:"https://www.webchecker.one/contact"},"/privacy-policy":{t:"Privacy Policy | Smart SEO Tools",d:"How we collect, use, protect your data. Covers cookies, analytics, AdSense, your rights.",c:"https://www.webchecker.one/privacy-policy"},"/terms":{t:"Terms of Service | Smart SEO Tools",d:"Terms for using Smart SEO Tools. Rights, obligations, conditions.",c:"https://www.webchecker.one/terms"}};
+let e=m[path];if(!e&&path.startsWith("/blog/")){const p=BLOG_POSTS.find(x=>`/blog/${x.slug}`===path);if(p)e={t:p.title,d:p.desc,c:`https://www.webchecker.one/blog/${p.slug}`}}
 if(!e)return;document.title=e.t;
 let desc=document.querySelector('meta[name="description"]');if(!desc){desc=document.createElement("meta");desc.name="description";document.head.appendChild(desc)}desc.content=e.d;
 let can=document.querySelector('link[rel="canonical"]');if(!can){can=document.createElement("link");can.rel="canonical";document.head.appendChild(can)}can.href=e.c;

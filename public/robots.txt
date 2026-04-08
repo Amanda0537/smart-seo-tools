@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://webchecker.one/sitemap.xml
+Host: https://www.webchecker.one
+Sitemap: https://www.webchecker.one/sitemap.xml
