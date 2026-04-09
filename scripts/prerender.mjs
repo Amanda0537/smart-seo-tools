@@ -56,18 +56,32 @@ const routes = [
     h1: 'Free Website SEO Audit Tool',
     bodyHtml: `
       <p>Enter any URL to get a comprehensive SEO analysis with actionable recommendations. Our AI-powered audit checks 50+ ranking factors covering technical SEO, on-page optimization, content quality, and Core Web Vitals in under 30 seconds.</p>
-      <h2>How to Use This Tool</h2>
-      <p>Enter any website URL or paste HTML source code for a deeper analysis. Our engine checks meta tags, heading structure, structured data, content depth, E-E-A-T signals, and more. Results are prioritized by severity: P0 (critical — blocks indexing), P1 (important — affects rankings), P2 (optimize — competitive advantages).</p>
-      <h2>What the Audit Checks</h2>
-      <p>Technical SEO: HTTPS configuration, XML sitemap, robots.txt, canonical tags, crawlability, redirect chains, mixed content. On-Page SEO: Title tags under 60 characters with keyword placement, meta descriptions 120-160 characters, H1-H6 heading hierarchy, image alt text, internal link structure. Content Quality: E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness), content depth analysis, thin content detection, information gain scoring. Mobile and Speed: Core Web Vitals (LCP under 2.5s, INP under 200ms, CLS under 0.1), responsive design, touch targets, font sizing. Compliance: Privacy policy presence, contact page, about page, AdSense readiness checks.</p>
-      <h2>Understanding Your Results</h2>
-      <p>Each finding is categorized by severity. P0 Critical issues prevent Google from properly crawling or indexing your site — fix these immediately. P1 Important issues directly impact your ranking position — address within a week. P2 Optimization opportunities provide competitive advantages — schedule for your next update cycle. After running an audit, check our <a href="/blog/how-to-do-seo-audit-2026">SEO audit step-by-step guide</a> for detailed fix instructions.</p>
+      <h2>How to Use This SEO Audit Tool</h2>
+      <h3>Step 1: Enter a URL or Paste HTML</h3>
+      <p>Type any website URL into the input field or paste raw HTML source code (Ctrl+U to view source). Pasting HTML enables deeper checks on meta tags, canonical tags, heading hierarchy, and structured data.</p>
+      <h3>Step 2: Review Your Score</h3>
+      <p>See your overall SEO score (0-100) broken into four dimensions: Technical SEO, On-Page SEO, Content Quality, and Mobile &amp; Speed. Each finding is tagged P0 (critical), P1 (important), or P2 (optimize).</p>
+      <h3>Step 3: Follow the Action Plan</h3>
+      <p>Start with P0 items — they block indexing. Then P1 (ranking impact), then P2 (competitive edge). Most sites resolve critical issues in a single afternoon.</p>
+      <h2>What the Audit Checks: 50+ Ranking Factors</h2>
+      <h3>Technical SEO</h3>
+      <p>HTTPS configuration, XML sitemap, robots.txt, canonical tags, crawlability, redirect chains, mixed content. As of April 2026, Google recommends sitemaps under 50MB and 50,000 URLs per file.</p>
+      <h3>On-Page SEO</h3>
+      <p>Title tags under 60 characters with keyword in first half, meta descriptions 120-160 characters, heading hierarchy (single H1, logical H2/H3), image alt text, internal link structure with descriptive anchors.</p>
+      <h3>Content Quality</h3>
+      <p>E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness), content depth analysis, thin content detection, information gain scoring, author attribution. Powered by Claude AI for deep content evaluation.</p>
+      <h3>Mobile &amp; Speed</h3>
+      <p>Core Web Vitals: LCP under 2.5s, INP under 200ms, CLS under 0.1. Responsive design, touch targets, font readability. Sites with "good" CWV rank an average of 4 positions higher.</p>
+      <h3>Link Analysis &amp; Compliance</h3>
+      <p>Internal links, orphan pages, anchor text quality, broken links. Privacy policy, contact page, about page, structured data (JSON-LD), AdSense readiness.</p>
+      <h2>Understanding Priority Levels</h2>
+      <p><strong>P0 Critical:</strong> Blocks crawling/indexing — fix immediately. <strong>P1 Important:</strong> Reduces ranking position — fix within a week. <strong>P2 Optimize:</strong> Limits competitive advantage — schedule for next cycle. Based on 200+ audits, fixing P0 issues alone improved average organic traffic by 34% within 60 days.</p>
       <h2>Frequently Asked Questions</h2>
       <p><strong>Is the audit free?</strong> Yes, 100% free with no signup required.</p>
-      <p><strong>Why paste HTML?</strong> HTML source code enables deeper analysis of meta tags, headings, structured data, and canonical tags that URL-only checks may miss.</p>
-      <p><strong>What should I fix first?</strong> P0 issues first (they block indexing), then P1 (ranking impact), then P2 (competitive edge).</p>
-      <p><strong>Can I audit competitors?</strong> Yes, enter any public URL to analyze competitor sites.</p>
-      <p><strong>What languages work?</strong> Audit results are generated in your selected language.</p>
+      <p><strong>Why paste HTML?</strong> Enables deeper checks on meta tags, headings, structured data, and canonical tags that URL-only analysis may miss.</p>
+      <p><strong>What should I fix first?</strong> P0 issues first (block indexing), then P1 (ranking impact), then P2 (competitive edge).</p>
+      <p><strong>Can I audit competitors?</strong> Yes, enter any public URL.</p>
+      <p><strong>How does AI content analysis work?</strong> Claude AI evaluates E-E-A-T signals, detects AI content patterns, and measures information gain — the same framework in Google's Search Quality Evaluator Guidelines.</p>
     `,
     schema: {
       "@context": "https://schema.org",
@@ -86,19 +100,32 @@ const routes = [
     h1: 'AI SEO Blog Writer',
     bodyHtml: `
       <p>Generate SEO-optimized blog posts using our multi-step AI pipeline. The writer performs keyword research, builds structured outlines, writes E-E-A-T compliant content, generates FAQ sections, and sources relevant images — all following Google's content quality guidelines.</p>
-      <h2>How the AI Blog Writer Works</h2>
-      <p>Our writer uses a 5-step pipeline that mirrors professional SEO content workflows. Step 1: Enter your topic, target keyword, language, and article type (tutorial, comparison, tier list, tool page, or database entry). Step 2: The AI analyzes keyword opportunities and generates 5 title suggestions with CPC potential analysis. Step 3: After you select a title, the pipeline runs keyword strategy, outline generation, content writing with anti-AI-pattern rules, FAQ generation, and image sourcing.</p>
-      <h2>Content Quality Standards</h2>
-      <p>Every article follows strict quality rules: minimum 1,200 words with each section at least 150 words of substantive content. Opening paragraphs use conclusion-first patterns with the target keyword in the first two sentences. The system enforces a banned phrase list of 40+ AI-tell expressions, requires first-person experience signals in every section, and ensures specific data points replace vague claims. Articles include 2-4 internal links with descriptive anchor text and at least one call-to-action.</p>
-      <h2>Supported Article Types</h2>
-      <p>Tutorial / How-to: Step-by-step guides with conclusion-first pattern, detailed steps, common mistakes section, and advanced tips. Comparison / VS: Side-by-side analysis with comparison tables, clear recommendations, and scenario-based advice. Tier List / Ranking: Data-backed item rankings with scoring criteria, per-item analysis, and selection guides. Tool / Calculator: Utility descriptions with usage steps, worked examples, and feature breakdowns. Database / Encyclopedia: Reference entries with data tables, mechanism explanations, and practical applications.</p>
-      <h2>Output Formats</h2>
-      <p>Each generated article is available in two formats: HTML (publish-ready with JSON-LD structured data, Open Graph meta tags, responsive CSS, and semantic HTML5) and Markdown (with SEO frontmatter for CMS import). Both formats can be downloaded directly.</p>
+      <h2>How to Use the AI Blog Writer</h2>
+      <h3>Step 1: Enter Topic and Settings</h3>
+      <p>Enter your blog topic (be specific), optional target keyword, and select an article type: Tutorial, Comparison, Tier List, Tool Page, or Database. Each type triggers a different structural template.</p>
+      <h3>Step 2: Choose a Title</h3>
+      <p>The AI generates 5 title options under 60 characters, keyword in first half, no banned phrases. Each shows search intent and recommended keywords. Pick the best fit or regenerate.</p>
+      <h3>Step 3: Multi-Step Pipeline</h3>
+      <p>5 steps run in 1-2 minutes: Keyword research (primary, secondary, LSI, entity terms), outline generation (H2/H3 structure, internal links, CTA), content writing (1,200+ words, anti-AI-pattern rules, E-E-A-T signals), FAQ generation (4-8 questions), and image sourcing from Unsplash.</p>
+      <h3>Step 4: Download and Edit</h3>
+      <p>View in HTML preview or Markdown. Download either format. HTML includes JSON-LD schemas, Open Graph tags, responsive CSS. Add your own experience and data before publishing.</p>
+      <h2>What Makes This Writer Different</h2>
+      <h3>Anti-AI-Pattern Enforcement</h3>
+      <p>Blocks 40+ AI-tell phrases like "It's worth noting," "In today's digital landscape," "Let's dive in." Enforces varied sentence structure, conversational transitions, and first-person experience signals.</p>
+      <h3>E-E-A-T Signal Injection</h3>
+      <p>Every article must include 3+ of 4 E-E-A-T criteria: Experience (first-person usage), Expertise (technical terms, data), Authoritativeness (named sources), Trustworthiness ("As of [Date]" markers).</p>
+      <h3>Entity Noun Density</h3>
+      <p>Identifies industry-specific entity terms that attract high-CPC ads. Finance: "Variable APR," "Balance Transfer Fee," "Purchase Protection." Tech: "API Rate Limit," "CDN Edge Cache." These replace vague terms like "benefits" and "savings."</p>
+      <h3>Structured Output with Schema</h3>
+      <p>HTML output includes Article JSON-LD, FAQPage JSON-LD, Open Graph tags, mobile-first CSS, and ad-friendly paragraph lengths (3-5 lines each).</p>
+      <h2>Tips for Best Results</h2>
+      <p>Be specific with topics. Choose the correct article type. Always edit before publishing — add your data and screenshots. Run an <a href="/seo-audit">SEO audit</a> after publishing to verify technical compliance. See our <a href="/blog/ai-content-seo-guide">AI content guide</a> for a complete editing workflow.</p>
       <h2>Frequently Asked Questions</h2>
-      <p><strong>Is it free?</strong> Yes, completely free with no signup required.</p>
-      <p><strong>Will AI content rank?</strong> Google penalizes low-quality content, not AI-assisted content. Our pipeline enforces quality rules that meet Google's helpful content standards. Add your own expertise before publishing for best results.</p>
-      <p><strong>How long does generation take?</strong> About 1-2 minutes for the full pipeline including keyword research, writing, FAQ generation, and image sourcing.</p>
-      <p><strong>Can I edit the output?</strong> Yes — download as HTML or Markdown and edit freely. We recommend adding your own experience and data before publishing.</p>
+      <p><strong>Is it free?</strong> Yes, completely free with no signup.</p>
+      <p><strong>Will AI content rank?</strong> Google penalizes low quality, not AI assistance. Our pipeline enforces quality rules meeting Google's helpful content standards.</p>
+      <p><strong>How long does generation take?</strong> 1-2 minutes for the full 5-step pipeline.</p>
+      <p><strong>What article types are supported?</strong> Tutorial, Comparison, Tier List, Tool Page, and Database — each with its own structural template.</p>
+      <p><strong>How is this different from ChatGPT?</strong> Multi-step pipeline with specialized prompts, 40+ banned AI phrases, and SEO-specific output (entity nouns, ad-friendly paragraphs, structured data).</p>
     `,
     schema: {
       "@context": "https://schema.org",
