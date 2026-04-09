@@ -1,27 +1,6 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "webchecker.one" }],
-      "destination": "https://www.webchecker.one/:path*",
-      "permanent": true
-    }
-  ],
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/seo-audit", "destination": "/seo-audit.html" },
-    { "source": "/blog-writer", "destination": "/blog-writer.html" },
-    { "source": "/blog", "destination": "/blog.html" },
-    { "source": "/blog/how-to-do-seo-audit-2026", "destination": "/blog/how-to-do-seo-audit-2026.html" },
-    { "source": "/blog/core-web-vitals-guide", "destination": "/blog/core-web-vitals-guide.html" },
-    { "source": "/blog/ai-content-seo-guide", "destination": "/blog/ai-content-seo-guide.html" },
-    { "source": "/about", "destination": "/about.html" },
-    { "source": "/contact", "destination": "/contact.html" },
-    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
-    { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/((?!api|assets|favicon|robots|sitemap).*)", "destination": "/index.html" }
+    { "source": "/((?!api|assets|favicon|robots|sitemap|ads).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/writer-article.js": {

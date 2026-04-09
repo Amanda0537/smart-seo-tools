@@ -12,7 +12,9 @@ export default async function handler(req, res) {
 
   try {
     const { queries } = req.body;
+    console.log("Image queries received:", JSON.stringify(queries));
     if (!queries || !Array.isArray(queries) || queries.length === 0) {
+      console.log("No queries provided");
       return res.status(400).json({ error: "Missing queries array" });
     }
 
@@ -20,10 +22,12 @@ export default async function handler(req, res) {
     for (const q of queries.slice(0, 5)) {
       const params = new URLSearchParams({ query: q.query, per_page: "1", orientation: "landscape", content_filter: "high" });
       try {
+        console.log(`Searching Unsplash for: "${q.query}"`);
         const r = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
           headers: { "Authorization": `Client-ID ${accessKey}`, "Accept-Version": "v1" },
         });
-        if (!r.ok) continue;
+        console.log(`Unsplash response for "${q.query}": ${r.status}`);
+        if (!r.ok) { console.error(`Unsplash error ${r.status} for "${q.query}"`); continue; }
         const data = await r.json();
         const photo = data.results?.[0];
         if (photo) {
@@ -40,6 +44,7 @@ export default async function handler(req, res) {
       } catch (err) { console.error(`Image fetch failed for "${q.query}":`, err); }
     }
 
+    console.log(`Returning ${images.length} images`);
     return res.status(200).json({ images, fallback: false });
   } catch (e) {
     console.error("Images error:", e);
