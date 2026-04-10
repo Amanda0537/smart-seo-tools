@@ -1,10 +1,23 @@
 {
-  "name": "instasaver",
+  "name": "smart-seo-tools",
   "version": "1.0.0",
-  "private": true,
-  "description": "InstaSaver - Free Instagram Video Downloader",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Static site, no build step needed'"
-  }
+    "dev": "vite",
+    "build": "vite build && node scripts/prerender.mjs",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.5"
+  },
+  "type": "module"
 }
